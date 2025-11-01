@@ -475,9 +475,12 @@ devsecops-project/
 - [ ] Integrate with cloud-native security tools (GCP Security Command Center)
 - [ ] Implement secrets management (HashiCorp Vault)
 
-## 📝 License
+## 📝 Screenshot
 
-This project is open-source and available for educational purposes.
+
+![Architecture Image ](images/architecture.png)
+
+![Deployment Image ](images/prject-res.png)
 
 ## 👤 Author
 
