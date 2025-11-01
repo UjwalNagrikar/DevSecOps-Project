@@ -478,7 +478,7 @@ devsecops-project/
 ## 📝 Screenshot
 
 
-![Architecture Image ](images/architecture.png)
+![Architecture Image ](images/architure.png)
 
 ![Deployment Image ](images/prject-res.png)
 
