@@ -1,0 +1,104 @@
+---
+# ArgoCD Application for dev environment
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devsecops-app-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_ORG/DevSecOps-Project.git
+    targetRevision: develop
+    path: helm/devsecops-app
+    helm:
+      values: |
+        replicaCount: 2
+        image:
+          tag: develop
+        environment: dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: devsecops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+---
+# ArgoCD Application for staging
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devsecops-app-staging
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_ORG/DevSecOps-Project.git
+    targetRevision: main
+    path: helm/devsecops-app
+    helm:
+      values: |
+        replicaCount: 3
+        image:
+          tag: staging
+        environment: staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: devsecops-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+---
+# ArgoCD Application for production
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devsecops-app-prod
+  namespace: argocd
+spec:
+  project: prod-project
+  source:
+    repoURL: https://github.com/YOUR_ORG/DevSecOps-Project.git
+    targetRevision: main
+    path: helm/devsecops-app
+    helm:
+      values: |
+        replicaCount: 5
+        image:
+          tag: latest
+        environment: prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: devsecops-prod
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  notifications:
+    - type: slack
+      channel: "#deployments"

@@ -1,0 +1,17 @@
+apiVersion: v2
+name: devsecops-app
+description: Production-hardened Helm chart for DevSecOps application
+type: application
+version: 1.0.0
+appVersion: "1.0"
+
+keywords:
+  - kubernetes
+  - gke
+  - security
+  - observability
+  - gitops
+
+maintainers:
+  - name: DevSecOps Team
+    email: devsecops@example.com

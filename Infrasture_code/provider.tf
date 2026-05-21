@@ -1,16 +1,40 @@
 terraform {
-  required_version = ">= 1.6.0"
-
+  required_version = ">= 1.0"
   required_providers {
     google = {
       source  = "hashicorp/google"
       version = "~> 5.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.23"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.11"
+    }
   }
 }
 
 provider "google" {
-  project     = var.project_id
-  region      = var.default_region
-  credentials = var.credentials_file == "" ? null : file(var.credentials_file)
+  project = var.project_id
+  region  = var.region
 }
+
+# Kubernetes provider for cluster operations
+provider "kubernetes" {
+  host                   = "https://${google_container_cluster.primary.endpoint}"
+  token                  = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(google_container_cluster.primary.master_auth[0].cluster_ca_certificate)
+}
+
+# Helm provider for package management
+provider "helm" {
+  kubernetes {
+    host                   = "https://${google_container_cluster.primary.endpoint}"
+    token                  = data.google_client_config.default.access_token
+    cluster_ca_certificate = base64decode(google_container_cluster.primary.master_auth[0].cluster_ca_certificate)
+  }
+}
+
+data "google_client_config" "default" {}

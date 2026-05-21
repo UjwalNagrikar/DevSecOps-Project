@@ -1,0 +1,203 @@
+---
+# Prometheus
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  labels:
+    name: observability
+
+---
+# ServiceMonitor for Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: devsecops-app
+  namespace: devsecops
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: devsecops-app
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+
+---
+# PrometheusRule for alerting
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: devsecops-app-alerts
+  namespace: observability
+spec:
+  groups:
+    - name: devsecops.rules
+      interval: 30s
+      rules:
+        - alert: HighErrorRate
+          expr: 'rate(http_requests_total{status=~"5.."}[5m]) > 0.05'
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High error rate detected"
+            description: "Error rate is {{ $value }} errors per second"
+
+        - alert: HighMemoryUsage
+          expr: 'container_memory_usage_bytes{pod=~"devsecops.*"} / 1e9 > 0.5'
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory usage detected"
+            description: "Pod {{ $labels.pod }} memory usage is {{ $value }} GB"
+
+        - alert: PodRestartingTooOften
+          expr: 'rate(kube_pod_container_status_restarts_total{pod=~"devsecops.*"}[15m]) > 0.1'
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod restarting too frequently"
+            description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in 15 minutes"
+
+        - alert: NodePressure
+          expr: 'kube_node_status_condition{condition="MemoryPressure",status="true"} == 1'
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node memory pressure detected"
+            description: "Node {{ $labels.node }} has memory pressure"
+
+---
+# Loki Namespace (for log aggregation)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loki
+
+---
+# ConfigMap for Prometheus scrape config
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: observability
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 30s
+      scrape_timeout: 10s
+      evaluation_interval: 30s
+    
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+                - alertmanager:9093
+    
+    scrape_configs:
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+---
+# ConfigMap for Loki scrape config
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-config
+  namespace: loki
+data:
+  loki-config.yaml: |
+    auth_enabled: false
+    
+    ingester:
+      chunk_idle_period: 3m
+      chunk_retain_period: 1m
+      max_chunk_age: 1h
+      chunk_encoding: snappy
+    
+    limits_config:
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+    
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: boltdb-shipper
+          object_store: filesystem
+          schema:
+            version: v11
+            index:
+              prefix: index_
+              period: 24h
+    
+    server:
+      http_listen_port: 3100
+      log_level: info
+    
+    storage_config:
+      boltdb_shipper:
+        active_index_directory: /loki/boltdb-shipper-active
+        shared_store: filesystem
+      filesystem:
+        directory: /loki/chunks
+
+---
+# ConfigMap for Alertmanager
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: observability
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+    
+    route:
+      receiver: 'default'
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      routes:
+        - match:
+            severity: critical
+          receiver: 'critical'
+          group_wait: 0s
+          repeat_interval: 1h
+        - match:
+            severity: warning
+          receiver: 'warning'
+          repeat_interval: 12h
+    
+    receivers:
+      - name: 'default'
+      - name: 'critical'
+      - name: 'warning'

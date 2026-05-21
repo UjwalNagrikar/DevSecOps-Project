@@ -1,102 +1,135 @@
 variable "project_id" {
-  description = "GCP project ID where the infrastructure will be deployed."
+  description = "Google Cloud Project ID"
   type        = string
 }
 
-variable "credentials_file" {
-  description = "Optional path to a GCP service account JSON key. Leave empty to use Application Default Credentials."
+variable "region" {
+  description = "GCP region for resources"
   type        = string
-  default     = ""
+  default     = "us-central1"
 }
 
-variable "app_name" {
-  description = "Application name used for GCP resource names and labels."
+variable "cluster_name" {
+  description = "GKE cluster name"
   type        = string
-  default     = "gcp-multi-region-app"
+  default     = "devsecops-gke-cluster"
 }
 
-variable "default_region" {
-  description = "Default provider region."
+variable "kubernetes_version" {
+  description = "Kubernetes version for GKE"
   type        = string
-  default     = "asia-south1"
+  default     = "1.27"
 }
 
-variable "mumbai_region" {
-  description = "GCP Mumbai region."
-  type        = string
-  default     = "asia-south1"
-}
-
-variable "singapore_region" {
-  description = "GCP Singapore region."
-  type        = string
-  default     = "asia-southeast1"
-}
-
-variable "mumbai_zones" {
-  description = "Zones for the regional managed instance group in Mumbai."
-  type        = list(string)
-  default     = ["asia-south1-a", "asia-south1-b"]
-}
-
-variable "singapore_zones" {
-  description = "Zones for the regional managed instance group in Singapore."
-  type        = list(string)
-  default     = ["asia-southeast1-a", "asia-southeast1-b"]
-}
-
-variable "mumbai_subnet_cidr" {
-  description = "CIDR block for the Mumbai subnet."
-  type        = string
-  default     = "10.10.0.0/20"
-}
-
-variable "singapore_subnet_cidr" {
-  description = "CIDR block for the Singapore subnet."
-  type        = string
-  default     = "10.20.0.0/20"
-}
-
-variable "machine_type" {
-  description = "Compute Engine machine type for application instances."
-  type        = string
-  default     = "e2-micro"
-}
-
-variable "source_image" {
-  description = "Boot disk image for application instances."
-  type        = string
-  default     = "projects/debian-cloud/global/images/family/debian-12"
-}
-
-variable "app_port" {
-  description = "Application HTTP port."
-  type        = number
-  default     = 80
-}
-
-variable "min_replicas" {
-  description = "Minimum number of instances per region."
-  type        = number
-  default     = 1
-}
-
-variable "max_replicas" {
-  description = "Maximum number of instances per region."
+variable "node_count" {
+  description = "Initial number of nodes in the cluster"
   type        = number
   default     = 3
 }
 
-variable "cpu_target" {
-  description = "Target CPU utilization for regional autoscalers."
+variable "min_node_count" {
+  description = "Minimum number of nodes in node pool"
   type        = number
-  default     = 0.6
+  default     = 2
 }
 
-variable "enable_ssh" {
-  description = "Whether to allow SSH access to instances."
+variable "max_node_count" {
+  description = "Maximum number of nodes in node pool"
+  type        = number
+  default     = 10
+}
+
+variable "machine_type" {
+  description = "Machine type for nodes"
+  type        = string
+  default     = "e2-standard-4"
+}
+
+variable "disk_size_gb" {
+  description = "Disk size in GB for nodes"
+  type        = number
+  default     = 50
+}
+
+variable "network_name" {
+  description = "VPC network name"
+  type        = string
+  default     = "devsecops-vpc"
+}
+
+variable "subnet_name" {
+  description = "Subnet name for GKE"
+  type        = string
+  default     = "devsecops-subnet"
+}
+
+variable "ip_range_pods" {
+  description = "IP range for pods"
+  type        = string
+  default     = "10.4.0.0/14"
+}
+
+variable "ip_range_services" {
+  description = "IP range for services"
+  type        = string
+  default     = "10.0.0.0/20"
+}
+
+variable "subnet_cidr" {
+  description = "CIDR range for subnet"
+  type        = string
+  default     = "10.128.0.0/20"
+}
+
+variable "nat_name" {
+  description = "Cloud NAT name"
+  type        = string
+  default     = "devsecops-nat"
+}
+
+variable "router_name" {
+  description = "Cloud Router name"
+  type        = string
+  default     = "devsecops-router"
+}
+
+variable "enable_binary_authorization" {
+  description = "Enable Binary Authorization"
   type        = bool
-  default     = false
+  default     = true
+}
+
+variable "enable_network_policy" {
+  description = "Enable Network Policy for the cluster"
+  type        = bool
+  default     = true
+}
+
+variable "enable_workload_identity" {
+  description = "Enable Workload Identity for the cluster"
+  type        = bool
+  default     = true
+}
+
+variable "enable_shielded_nodes" {
+  description = "Enable Shielded Nodes for the cluster"
+  type        = bool
+  default     = true
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "dev"
+}
+
+variable "labels" {
+  description = "Common labels for resources"
+  type        = map(string)
+  default = {
+    environment = "devsecops"
+    managed_by  = "terraform"
+  }
 }
 
 variable "ssh_source_ranges" {

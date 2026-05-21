@@ -1,0 +1,148 @@
+---
+# Chaos Engineering - Pod Failure Simulation
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-failure-test
+  namespace: devsecops
+spec:
+  action: pod-failure
+  mode: fixed
+  value: 1
+  duration: 5m
+  scheduler:
+    cron: '@weekly'
+  selector:
+    namespaces:
+      - devsecops
+    labelSelectors:
+      app.kubernetes.io/name: devsecops-app
+
+---
+# Chaos Engineering - Network Delay
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay-test
+  namespace: devsecops
+spec:
+  action: delay
+  mode: fixed
+  value: 3
+  delay:
+    latency: 100ms
+    jitter: 50ms
+  duration: 5m
+  scheduler:
+    cron: '@weekly'
+  selector:
+    namespaces:
+      - devsecops
+    labelSelectors:
+      app.kubernetes.io/name: devsecops-app
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - devsecops
+
+---
+# Chaos Engineering - Network Packet Loss
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-loss-test
+  namespace: devsecops
+spec:
+  action: loss
+  mode: fixed
+  value: 2
+  loss:
+    loss: "5%"
+  duration: 5m
+  scheduler:
+    cron: '@weekly'
+  selector:
+    namespaces:
+      - devsecops
+    labelSelectors:
+      app.kubernetes.io/name: devsecops-app
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - devsecops
+
+---
+# Chaos Engineering - Memory Stress
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: memory-stress-test
+  namespace: devsecops
+spec:
+  action: stress
+  mode: fixed
+  value: 1
+  stressors:
+    memory:
+      workers: 2
+      size: 256M
+  duration: 5m
+  scheduler:
+    cron: '@weekly'
+  selector:
+    namespaces:
+      - devsecops
+    labelSelectors:
+      app.kubernetes.io/name: devsecops-app
+
+---
+# Chaos Engineering - CPU Stress
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: cpu-stress-test
+  namespace: devsecops
+spec:
+  action: stress
+  mode: fixed
+  value: 1
+  stressors:
+    cpu:
+      workers: 2
+      load: 50
+  duration: 5m
+  scheduler:
+    cron: '@weekly'
+  selector:
+    namespaces:
+      - devsecops
+    labelSelectors:
+      app.kubernetes.io/name: devsecops-app
+
+---
+# Test Pod for Load Generation
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: load-test
+  namespace: devsecops
+spec:
+  schedule: "*/30 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: load-test
+              image: grafana/k6:latest
+              command: ["k6"]
+              args:
+                - "run"
+                - "-d"
+                - "5m"
+                - "-u"
+                - "400"
+                - "https://devsecops.example.com"
+          restartPolicy: OnFailure
